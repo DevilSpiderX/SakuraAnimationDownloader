@@ -33,6 +33,8 @@ headers = {
                   "1 Safari/537.36 Edg/87.0.664.75"
 }  # 请求头
 recordingJson = {}  # 历史记录字典
+proxies = {'http': '127.0.0.1:10809',
+           'https': '127.0.0.1:10809'}
 
 
 def getHTML(url: str) -> str:
@@ -42,7 +44,10 @@ def getHTML(url: str) -> str:
     :param url: 类型为字符串。正确的网址。
     :return: 类型为字符串。网页源码。
     """
-    r = requests.get(url)
+    try:
+        r = requests.get(url)
+    except requests.exceptions.ProxyError:
+        r = requests.get(url, proxies=proxies)
     r.encoding = 'gb2312'
     return r.text
 
@@ -393,7 +398,11 @@ def downLoad(episode: str, url: str, index: int):
 
         showSizeThread = ShowPercentageThread(path, index)
 
-        r = requests.get(url, stream=True, headers=headers)
+        try:
+            r = requests.get(url, stream=True, headers=headers)
+        except requests.exceptions.ProxyError:
+            r = requests.get(url, stream=True, headers=headers, proxies=proxies)
+
         allSize = float(r.headers.get('Content-Length')) / 1024 / 1024
 
         with open(path, "wb") as f:
@@ -484,9 +493,9 @@ class ShowNetSpeedThread(Thread):
                 downloadSpeed = (now - last) / 1
                 last = now
                 if downloadSpeed < 1:
-                    downloader.speedLabel.setText("%.0f KB/s" % (downloadSpeed * 1024))
+                    downloader.speedLabel.setText("Speed: %.0f KB/s" % (downloadSpeed * 1024))
                 else:
-                    downloader.speedLabel.setText("%.2f MB/s" % (downloadSpeed))
+                    downloader.speedLabel.setText("Speed: %.2f MB/s" % (downloadSpeed))
             time.sleep(1)
         pass
 
