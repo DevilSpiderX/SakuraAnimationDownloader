@@ -101,6 +101,7 @@ class QueryThread(Thread):
 
     def __init__(self, inputUrl: str):
         super(QueryThread, self).__init__(name="QueryThread_0")
+        self.setDaemon(True)
         self.inputUrl = inputUrl
         pass
 
