@@ -1,8 +1,6 @@
 <h1 align="center"> 樱花动漫下载器 </h1>
 <p align="center"> 方便从樱花动漫网站中下载视频 </p>
 <p align="center">
-	<a href="http://www.imomoe.ai/"> 樱花动漫 </a>
-	•
 	<a href="https://github.com/DevilSpiderX/SakuraAnimationDownloader/issues"> 问题反馈 </a>
 </p>
 
