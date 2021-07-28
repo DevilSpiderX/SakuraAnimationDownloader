@@ -25,10 +25,6 @@
   <property name="windowTitle">
    <string>樱花动漫下载器</string>
   </property>
-  <property name="windowIcon">
-   <iconset>
-    <normaloff>favicon.png</normaloff>favicon.png</iconset>
-  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QPushButton" name="queryButton">
     <property name="geometry">
@@ -46,9 +42,9 @@
    <widget class="QLabel" name="label1">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>30</x>
       <y>10</y>
-      <width>111</width>
+      <width>91</width>
       <height>31</height>
      </rect>
     </property>
@@ -59,7 +55,7 @@
      </font>
     </property>
     <property name="text">
-     <string>第一集网址：</string>
+     <string>动漫链接：</string>
     </property>
    </widget>
    <widget class="QComboBox" name="videoSourceComboBox">
@@ -125,36 +121,12 @@
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
-   <widget class="QPushButton" name="allSelectButton">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>130</y>
-      <width>201</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>宋体</family>
-     </font>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">background-color: rgb(255, 255, 255);</string>
-    </property>
-    <property name="text">
-     <string>全选</string>
-    </property>
-    <property name="flat">
-     <bool>true</bool>
-    </property>
-   </widget>
    <widget class="QLabel" name="videoNameLabel">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>160</x>
       <y>90</y>
-      <width>351</width>
+      <width>451</width>
       <height>31</height>
      </rect>
     </property>
@@ -165,7 +137,10 @@
      </font>
     </property>
     <property name="text">
-     <string>       樱花动漫下载器</string>
+     <string>樱花动漫下载器</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
    <widget class="QLabel" name="VersionLabel">
@@ -178,7 +153,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Version: 1.1.6</string>
+     <string>Version: 1.1.7</string>
     </property>
    </widget>
    <widget class="QTreeWidget" name="treeWidget">
@@ -199,14 +174,22 @@
      <bool>true</bool>
     </attribute>
     <attribute name="headerMinimumSectionSize">
-     <number>190</number>
+     <number>194</number>
     </attribute>
     <attribute name="headerDefaultSectionSize">
-     <number>195</number>
+     <number>194</number>
     </attribute>
     <column>
      <property name="text">
-      <string>              </string>
+      <string>全选</string>
+     </property>
+     <property name="font">
+      <font>
+       <family>宋体</family>
+      </font>
+     </property>
+     <property name="textAlignment">
+      <set>AlignCenter</set>
      </property>
     </column>
     <column>
@@ -266,7 +249,6 @@
    <zorder>videoSourceComboBox</zorder>
    <zorder>downloadButton</zorder>
    <zorder>speedLabel</zorder>
-   <zorder>allSelectButton</zorder>
    <zorder>videoNameLabel</zorder>
    <zorder>VersionLabel</zorder>
    <zorder>lineEditComboBox</zorder>
@@ -308,7 +290,7 @@
   </action>
   <action name="downloadPathAction">
    <property name="text">
-    <string>下载目录</string>
+    <string>保存路径</string>
    </property>
   </action>
   <action name="exitAction">

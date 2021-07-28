@@ -3,15 +3,15 @@ import os
 import re
 import sys
 import time
+import urllib.request
 from threading import Thread
 
 import requests
-from PyQt5.QtCore import Qt, pyqtSlot, QThread, pyqtSignal
-from PyQt5.QtWidgets import QMainWindow, QApplication, QTreeWidgetItem, QCheckBox, QHBoxLayout, QWidget, \
-    QFileDialog, QProgressBar, QMessageBox, QLineEdit
+from PyQt5 import QtCore, QtWidgets
 
-import LogSysten
-from UI_MainDownloader import Ui_MainWindow
+import Icon
+import Log
+from uic.UI_MainDownloader import Ui_MainWindow
 
 checkBoxItems = []  # 集数下载复选框列表
 Url = 'http://www.imomoe.ai'  # 网页前缀
@@ -20,7 +20,7 @@ allSize = 0  # 总大小
 realUrl = []  # 真实视频地址
 episodes = []  # 视频的集数名称
 downloadSpeed = 0  # 下载速度
-downloadDirectory = "."  # 下载目录
+downloadDir = "."  # 下载目录
 headers = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed"
               "-exchange;v=b3;q=0.9",
@@ -33,8 +33,7 @@ headers = {
                   "1 Safari/537.36 Edg/87.0.664.75"
 }  # 请求头
 recordingJson = {}  # 历史记录字典
-proxies = {'http': '127.0.0.1:10809',
-           'https': '127.0.0.1:10809'}
+proxies = urllib.request.getproxies()
 
 
 def getHTML(url: str) -> str:
@@ -44,10 +43,7 @@ def getHTML(url: str) -> str:
     :param url: 类型为字符串。正确的网址。
     :return: 类型为字符串。网页源码。
     """
-    try:
-        r = requests.get(url)
-    except requests.exceptions.ProxyError:
-        r = requests.get(url, proxies=proxies)
+    r = requests.get(url, proxies=proxies)
     r.encoding = 'gb2312'
     return r.text
 
@@ -130,26 +126,31 @@ def query(inputUrl: str):
     pass
 
 
-class DownloaderFrame(QMainWindow, Ui_MainWindow):
+class DownloaderFrame(QtWidgets.QMainWindow):
     """下载器窗体类"""
 
-    showSelectionSignal = pyqtSignal(int)
-    addLineEditRecordingSignal = pyqtSignal()
+    showSelectionSignal = QtCore.pyqtSignal(int)
+    addLineEditRecordingSignal = QtCore.pyqtSignal()
 
     def __init__(self):
         super(DownloaderFrame, self).__init__()
-        self.setupUi(self)
-        self.lineEdit = QLineEdit()
+
+        self.ui = Ui_MainWindow()
+        self.icon = Icon.getIcon()
+        self.setWindowIcon(self.icon)
+
+        self.ui.setupUi(self)
+        self.lineEdit = QtWidgets.QLineEdit()
         self.videoListJson = json.loads('{\"1\":1}')
-        self.allSelectButton.setEnabled(False)
-        self.downloadButton.setEnabled(False)
+        self.ui.allSelectButton.setEnabled(False)
+        self.ui.downloadButton.setEnabled(False)
         self.setLineEdit()
         self.lineEdit.returnPressed.connect(self.on_queryButton_clicked)
         self.showSelectionSignal.connect(self.showSelection)
         self.addLineEditRecordingSignal.connect(self.addLineEditRecording)
         pass
 
-    @pyqtSlot(int)
+    @QtCore.pyqtSlot(int)
     def showSelection(self, index: int):
         """
         显示选项
@@ -161,23 +162,23 @@ class DownloaderFrame(QMainWindow, Ui_MainWindow):
         if index == -1:
             videoUrls = self.videoListJson[0][1]
 
-            self.videoNameLabel.setText(Title)
+            self.ui.videoNameLabel.setText(Title)
 
-            self.videoSourceComboBox.clear()
+            self.ui.videoSourceComboBox.clear()
             for i in range(0, len(self.videoListJson)):
-                self.videoSourceComboBox.addItem(str(i + 1))
+                self.ui.videoSourceComboBox.addItem(str(i + 1))
         else:
             videoUrls = self.videoListJson[index][1]
 
         checkBoxItems.clear()
         episodes.clear()
         realUrl.clear()
-        self.treeWidget.clear()
+        self.ui.treeWidget.clear()
         for i in range(0, len(videoUrls)):
-            treeItem = QTreeWidgetItem()
-            treeItem.setTextAlignment(3, Qt.AlignCenter)
-            treeItem.setTextAlignment(1, Qt.AlignCenter)
-            self.treeWidget.addTopLevelItem(treeItem)
+            treeItem = QtWidgets.QTreeWidgetItem()
+            treeItem.setTextAlignment(3, QtCore.Qt.AlignCenter)
+            treeItem.setTextAlignment(1, QtCore.Qt.AlignCenter)
+            self.ui.treeWidget.addTopLevelItem(treeItem)
 
             data = videoUrls[i].split('$')
             episode = data[0]
@@ -185,35 +186,35 @@ class DownloaderFrame(QMainWindow, Ui_MainWindow):
             url = data[1]
             realUrl.append(url)
 
-            checkBox = QCheckBox()
-            hLayout = QHBoxLayout()
-            hLayout.addWidget(checkBox, alignment=Qt.AlignCenter)
-            itemCheckBoxWidget = QWidget()
+            checkBox = QtWidgets.QCheckBox()
+            hLayout = QtWidgets.QHBoxLayout()
+            hLayout.addWidget(checkBox, alignment=QtCore.Qt.AlignCenter)
+            itemCheckBoxWidget = QtWidgets.QWidget()
             itemCheckBoxWidget.setLayout(hLayout)
-            self.treeWidget.setItemWidget(treeItem, 0, itemCheckBoxWidget)
+            self.ui.treeWidget.setItemWidget(treeItem, 0, itemCheckBoxWidget)
             checkBoxItems.append(checkBox)
             checkBox.stateChanged.connect(self.changeAllSelectButtonText)
 
             treeItem.setText(1, episode)
 
-            progressBar = QProgressBar()
+            progressBar = QtWidgets.QProgressBar()
             progressBar.setValue(0)
-            self.treeWidget.setItemWidget(treeItem, 2, progressBar)
+            self.ui.treeWidget.setItemWidget(treeItem, 2, progressBar)
 
-        self.allSelectButton.setEnabled(True)
-        self.downloadButton.setEnabled(True)
-        self.allSelectButton.setText("全选")
+        self.ui.allSelectButton.setEnabled(True)
+        self.ui.downloadButton.setEnabled(True)
+        self.ui.allSelectButton.setText("全选")
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def on_queryButton_clicked(self):
         try:
             inputUrl = self.lineEdit.text()
             if len(inputUrl) != 0:
-                self.videoNameLabel.setText("正在查询中，请稍候...")
+                self.ui.videoNameLabel.setText("正在查询中，请稍候...")
                 query(inputUrl)
         except requests.exceptions.ConnectionError as ex:
-            LogSysten.openLogOutObject()
+            Log.openLogOutObject()
             msg = {
                 "ErrorType": type(ex),
                 "Title": "无",
@@ -222,29 +223,29 @@ class DownloaderFrame(QMainWindow, Ui_MainWindow):
                 "TextOfLineEdit": self.lineEdit.text(),
                 "Reason": "输入了错误的网址"
             }
-            LogSysten.writeLog(msg)
-            LogSysten.closeLogOutObject()
-            msgBox = QMessageBox()
+            Log.writeLog(msg)
+            Log.closeLogOutObject()
+            msgBox = QtWidgets.QMessageBox()
             msgBox.setWindowTitle('错误')
             msgBox.setWindowIcon(self.icon)
-            msgBox.setIcon(QMessageBox.Critical)
+            msgBox.setIcon(QtWidgets.QMessageBox.Critical)
             msgBox.setText("请输入正确的网址")
-            msgBox.setStandardButtons(QMessageBox.Ok)
-            msgBox.setDefaultButton(QMessageBox.Ok)
+            msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
+            msgBox.setDefaultButton(QtWidgets.QMessageBox.Ok)
             msgBox.exec_()
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def on_allSelectButton_clicked(self):
-        if self.allSelectButton.text() == "全选":
+        if self.ui.allSelectButton.text() == "全选":
             for item in checkBoxItems:
-                item.setCheckState(Qt.Checked)
-            self.allSelectButton.setText("取消")
-        elif self.allSelectButton.text() == "取消":
+                item.setCheckState(QtCore.Qt.Checked)
+            self.ui.allSelectButton.setText("取消")
+        elif self.ui.allSelectButton.text() == "取消":
             for item in checkBoxItems:
-                item.setCheckState(Qt.Unchecked)
-            self.allSelectButton.setText("全选")
-        elif self.allSelectButton.text() == "反选":
+                item.setCheckState(QtCore.Qt.Unchecked)
+            self.ui.allSelectButton.setText("全选")
+        elif self.ui.allSelectButton.text() == "反选":
             for item in checkBoxItems:
                 if item.isChecked():
                     item.setChecked(False)
@@ -252,72 +253,72 @@ class DownloaderFrame(QMainWindow, Ui_MainWindow):
                     item.setChecked(True)
         pass
 
-    @pyqtSlot(str)
+    @QtCore.pyqtSlot(str)
     def on_videoSourceComboBox_activated(self, text):
         # self.showSelection(index=int(text) - 1)
         self.showSelectionSignal.emit(int(text) - 1)
-        self.allSelectButton.setText("全选")
+        self.ui.allSelectButton.setText("全选")
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def on_downloadButton_clicked(self):
         downloadThread = DownloadThread("downloadThread_0")
         downloadThread.start()
-        self.videoSourceComboBox.setEnabled(False)
-        self.downloadButton.setEnabled(False)
-        self.queryButton.setEnabled(False)
-        self.allSelectButton.setEnabled(False)
+        self.ui.videoSourceComboBox.setEnabled(False)
+        self.ui.downloadButton.setEnabled(False)
+        self.ui.queryButton.setEnabled(False)
+        self.ui.allSelectButton.setEnabled(False)
         for checkBox in checkBoxItems:
             checkBox.setEnabled(False)
-        for i in range(0, self.treeWidget.topLevelItemCount()):
+        for i in range(0, self.ui.treeWidget.topLevelItemCount()):
             if checkBoxItems[i].isChecked():
-                self.treeWidget.topLevelItem(i).setText(3, "等待中")
+                self.ui.treeWidget.topLevelItem(i).setText(3, "等待中")
         pass
 
-    @pyqtSlot(int, int)
+    @QtCore.pyqtSlot(int, int)
     def on_treeWidget_progressBar_setValue(self, index, percentage):
-        treeItem = self.treeWidget.topLevelItem(index)
-        self.treeWidget.itemWidget(treeItem, 2).setValue(percentage)
+        treeItem = self.ui.treeWidget.topLevelItem(index)
+        self.ui.treeWidget.itemWidget(treeItem, 2).setValue(percentage)
         pass
 
-    @pyqtSlot(int, str)
+    @QtCore.pyqtSlot(int, str)
     def on_treeWidget_itemStatus_change(self, index, status):
-        self.treeWidget.topLevelItem(index).setText(3, status)
+        self.ui.treeWidget.topLevelItem(index).setText(3, status)
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def changeAllSelectButtonText(self):
         statue = 0
         for item in checkBoxItems:
             if item.isChecked():
                 statue += 1
         if statue == 0:
-            self.allSelectButton.setText("全选")
+            self.ui.allSelectButton.setText("全选")
         elif statue == len(checkBoxItems):
-            self.allSelectButton.setText("取消")
+            self.ui.allSelectButton.setText("取消")
         else:
-            self.allSelectButton.setText("反选")
+            self.ui.allSelectButton.setText("反选")
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def on_downloadPathAction_triggered(self):
-        global downloadDirectory
-        downloadDirectory = QFileDialog.getExistingDirectory(self, "选择下载目录", downloadDirectory)
+        global downloadDir
+        downloadDir = QtWidgets.QFileDialog.getExistingDirectory(self, "选择下载目录", downloadDir)
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def on_exitAction_triggered(self):
-        QApplication.exit(0)
+        QtWidgets.QApplication.exit(0)
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def on_aboutAction_triggered(self):
-        QMessageBox.about(self, "关于 樱花动漫下载器", "\n作者：DevilSpider")
+        QtWidgets.QMessageBox.about(self, "关于 樱花动漫下载器", "\n作者：DevilSpider")
         pass
 
-    @pyqtSlot(QTreeWidgetItem, int)
+    @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem, int)
     def on_treeWidget_itemDoubleClicked(self, treeWidgetItem):
-        index = self.treeWidget.indexOfTopLevelItem(treeWidgetItem)
+        index = self.ui.treeWidget.indexOfTopLevelItem(treeWidgetItem)
         if checkBoxItems[index].isChecked():
             checkBoxItems[index].setChecked(False)
         else:
@@ -327,28 +328,28 @@ class DownloaderFrame(QMainWindow, Ui_MainWindow):
     def setLineEdit(self):
         global recordingJson
         self.lineEdit.setClearButtonEnabled(True)
-        self.lineEditComboBox.setLineEdit(self.lineEdit)
-        recordingPath = LogSysten.getSoftwareSettingStoragePath() + "\\Recording\\recording.json"
+        self.ui.lineEditComboBox.setLineEdit(self.lineEdit)
+        recordingPath = Log.getSoftwareSettingStoragePath() + "\\Recording\\recording.json"
         if os.path.lexists(recordingPath):
             with open(recordingPath, "r", encoding="utf-8")as reader:
                 recordingJson = json.load(reader)
             recordingList = [""]
             for key in recordingJson.keys():
                 recordingList.append(key)
-            self.lineEditComboBox.addItems(recordingList)
+            self.ui.lineEditComboBox.addItems(recordingList)
             pass
 
-    @pyqtSlot(str)
+    @QtCore.pyqtSlot(str)
     def on_lineEditComboBox_activated(self, nameOfAnimation):
         if nameOfAnimation in recordingJson.keys():
             self.lineEdit.setText(recordingJson[nameOfAnimation])
         pass
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def addLineEditRecording(self):
         if Title not in recordingJson.keys():
             recordingJson[Title] = self.lineEdit.text()
-            softwareSettingStoragePath = LogSysten.getSoftwareSettingStoragePath()
+            softwareSettingStoragePath = Log.getSoftwareSettingStoragePath()
             recordingStoragePath = softwareSettingStoragePath + "\\Recording"
             if not os.path.lexists(softwareSettingStoragePath):
                 os.mkdir(softwareSettingStoragePath)
@@ -373,13 +374,13 @@ class DownloadThread(Thread):
     def run(self) -> None:
         for i in range(0, len(checkBoxItems)):
             if checkBoxItems[i].isChecked():
-                downLoad(episodes[i], realUrl[i], i)
+                download(episodes[i], realUrl[i], i)
         pass
 
     pass
 
 
-def downLoad(episode: str, url: str, index: int):
+def download(episode: str, url: str, index: int):
     """
     进行下载
 
@@ -392,17 +393,14 @@ def downLoad(episode: str, url: str, index: int):
     print(episode + ":" + url)
     showSizeThread = None
     try:
-        if not os.path.lexists(downloadDirectory + "\\" + Title):
-            os.mkdir(downloadDirectory + "\\" + Title)
+        if not os.path.lexists(downloadDir + "\\" + Title):
+            os.mkdir(downloadDir + "\\" + Title)
 
-        path = downloadDirectory + "\\" + Title + '\\' + episode + ".mp4"
+        path = downloadDir + "\\" + Title + '\\' + episode + ".mp4"
 
         showSizeThread = ShowPercentageThread(path, index)
 
-        try:
-            r = requests.get(url, stream=True, headers=headers)
-        except requests.exceptions.ProxyError:
-            r = requests.get(url, stream=True, headers=headers, proxies=proxies)
+        r = requests.get(url, stream=True, headers=headers, proxies=proxies)
 
         allSize = float(r.headers.get('Content-Length')) / 1024 / 1024
 
@@ -413,7 +411,7 @@ def downLoad(episode: str, url: str, index: int):
                     f.write(chunk)
             showSizeThread.stop()
     except BaseException as ex:
-        LogSysten.openLogOutObject()
+        Log.openLogOutObject()
         msg = {
             "ErrorType": type(ex),
             "Title": Title,
@@ -422,17 +420,17 @@ def downLoad(episode: str, url: str, index: int):
             "TextOfLineEdit": downloader.lineEdit.text(),
             "VideoURL": url
         }
-        LogSysten.writeLog(msg)
-        LogSysten.closeLogOutObject()
+        Log.writeLog(msg)
+        Log.closeLogOutObject()
 
         showSizeThread.downloadFailed()
     pass
 
 
-class ShowPercentageThread(QThread):
+class ShowPercentageThread(QtCore.QThread):
     """显示下载完成度的线程"""
-    treeItemPercentageSignal = pyqtSignal(int, int)
-    treeItemStatusSignal = pyqtSignal(int, str)
+    treeItemPercentageSignal = QtCore.pyqtSignal(int, int)
+    treeItemStatusSignal = QtCore.pyqtSignal(int, str)
 
     def __init__(self, path, index):
         super().__init__()
@@ -494,9 +492,9 @@ class ShowNetSpeedThread(Thread):
                 downloadSpeed = (now - last) / 1
                 last = now
                 if downloadSpeed < 1:
-                    downloader.speedLabel.setText("Speed: %.0f KB/s" % (downloadSpeed * 1024))
+                    downloader.ui.speedLabel.setText("Speed: %.0f KB/s" % (downloadSpeed * 1024))
                 else:
-                    downloader.speedLabel.setText("Speed: %.2f MB/s" % (downloadSpeed))
+                    downloader.ui.speedLabel.setText("Speed: %.2f MB/s" % downloadSpeed)
             time.sleep(1)
         pass
 
@@ -508,7 +506,7 @@ class ShowNetSpeedThread(Thread):
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     downloader = DownloaderFrame()
     downloader.show()
     sys.exit(app.exec_())
