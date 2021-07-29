@@ -100,27 +100,6 @@
      <string>下载</string>
     </property>
    </widget>
-   <widget class="QLabel" name="speedLabel">
-    <property name="geometry">
-     <rect>
-      <x>600</x>
-      <y>574</y>
-      <width>181</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>新宋体</family>
-     </font>
-    </property>
-    <property name="text">
-     <string>Speed: 0 MB/s</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
    <widget class="QLabel" name="videoNameLabel">
     <property name="geometry">
      <rect>
@@ -248,7 +227,6 @@
    <zorder>label1</zorder>
    <zorder>videoSourceComboBox</zorder>
    <zorder>downloadButton</zorder>
-   <zorder>speedLabel</zorder>
    <zorder>videoNameLabel</zorder>
    <zorder>VersionLabel</zorder>
    <zorder>lineEditComboBox</zorder>

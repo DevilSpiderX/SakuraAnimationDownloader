@@ -7,6 +7,9 @@ DOWNLOAD_DIR 下载保存路径\n
 TEMP_DIR 缓存路径\n
 PROXY 代理地址\n
 MAX_NUM_PARALLEL_DOWNLOAD 最大并发下载数\n
+RECORDING_PATH 历史记录文件路径\n
+LOG_DIR 日志路径\n
+MAX_LOG 最大日志数量\n
 '''
 REQUEST_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed"
@@ -42,5 +45,7 @@ if "RECORDING_PATH" not in setting:
     setting["RECORDING_PATH"] = os.path.abspath("./recording.json")
 if "LOG_DIR" not in setting:
     setting["LOG_DIR"] = os.path.abspath("./log")
+if "MAX_LOG" not in setting:
+    setting["MAX_LOG"] = 7
 
 saveSetting()

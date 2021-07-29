@@ -27,3 +27,16 @@ def writeLog(name: str, msg: dict):
         writer.write("--------------------------------------------------------------------------------\n")
     logLock.release()
     pass
+
+
+def cleanLog():
+    logList = os.listdir(Config.setting["LOG_DIR"])
+    dif = len(logList) - Config.setting["MAX_LOG"]
+    if dif > 0:
+        for i in range(0, dif):
+            path = os.path.join(Config.setting["LOG_DIR"], logList[i])
+            os.remove(path)
+    pass
+
+
+cleanLog()
