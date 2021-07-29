@@ -5,7 +5,6 @@ import shutil
 import sys
 import time
 from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from PyQt5 import QtWidgets, QtCore
@@ -14,9 +13,9 @@ import Config
 import Log
 from uic.UI_MainDownloader import Ui_MainWindow
 import Icon
+from Executor import ThreadPoolExecutor
 
 HOST = "http://www.imomoe.la"
-executor = ThreadPoolExecutor(Config.setting["MAX_NUM_PARALLEL_DOWNLOAD"])
 
 
 class Animation:
@@ -26,7 +25,6 @@ class Animation:
         self.checkBoxItems = []  # 集数下载复选框列表
         self.selection = 0
         self.selectedUrls = {}
-        self.futures = []  # 储存concurrent.futures
         self.status = []  # -1：未选中，0：等待中，1：下载中，2：下载完成，3：下载失败
         pass
 
@@ -36,11 +34,10 @@ class Animation:
         pass
 
     def isDone(self, index: int) -> bool:
-        if len(self.futures) != 0:
-            return self.futures[index].done()
-        else:
+        if self.status[index] == 2 or self.status[index] == 3:
             return True
-        pass
+        else:
+            return False
 
 
 class DownloaderFrame(QtWidgets.QMainWindow):
@@ -61,6 +58,7 @@ class DownloaderFrame(QtWidgets.QMainWindow):
         self.inputLineEdit = QtWidgets.QLineEdit()
         self.animation = Animation()
         self.recoding = {}
+        self.executor = ThreadPoolExecutor(Config.setting["MAX_NUM_PARALLEL_DOWNLOAD"])
 
         self.ui.setupUi(self)
         self.setWindowIcon(self.icon)
@@ -74,6 +72,7 @@ class DownloaderFrame(QtWidgets.QMainWindow):
         self.ui.treeWidget.header().sectionClicked.connect(self.on_treeWidget_header_clicked)
         self.treeItemPercentageSignal.connect(self.on_treeWidget_progressBar_setValue)
         self.treeItemStatusSignal.connect(self.on_treeWidget_itemStatus_change)
+        self.executor.start()
         pass
 
     def query(self, url):
@@ -139,7 +138,6 @@ class DownloaderFrame(QtWidgets.QMainWindow):
         title = self.animation.title
         episode = list(self.animation.selectedUrls.keys())[index]
         url = self.animation.selectedUrls[episode]
-        print(episode + ":" + url)
         print(title + "：" + episode + "开始下载")
         self.animation.status[index] = 1
         DOWNLOAD_DIR = os.path.join(Config.setting["DOWNLOAD_DIR"], title)
@@ -170,20 +168,22 @@ class DownloaderFrame(QtWidgets.QMainWindow):
                         f.write(chunk)
             shutil.copyfile(TEMP_PATH, DOWNLOAD_PATH)
             os.remove(TEMP_PATH)
-            print(title + "：" + episode + "下载完成")
+            print(title + "：" + episode + " 下载完成")
             self.animation.status[index] = 2
         except BaseException as ex:
-            print(title + "：" + episode + "下载失败")
+            print(title + "：" + episode + " 下载失败")
             self.animation.status[index] = 3
             msg = {
                 "ErrorType": type(ex),
                 "Title": title,
                 "Section": episode,
                 "Event": "下载失败",
-                "TextOfLineEdit": self.lineEdit.text(),
+                "TextOfLineEdit": self.inputLineEdit.text(),
                 "VideoURL": url
             }
             Log.writeLog(time.strftime("%Y-%m-%d"), msg)
+        finally:
+            self.executor.lock.reduce()
         pass
 
     def m3u8Download(self, index: int):
@@ -192,6 +192,7 @@ class DownloaderFrame(QtWidgets.QMainWindow):
         url = self.animation.selectedUrls[episode]
         print(episode + ":" + url)
         self.treeItemStatusSignal.emit(index, "m3u8功能未完成")
+        self.executor.lock.reduce()
         pass
 
     def showPercentage(self, index: int, allSize: int):
@@ -243,8 +244,11 @@ class DownloaderFrame(QtWidgets.QMainWindow):
             self.animation.select(index)
 
         self.animation.checkBoxItems.clear()
+        self.animation.status.clear()
         self.ui.treeWidget.clear()
         for epi in self.animation.selectedUrls:
+            self.animation.status.append(-1)
+
             treeItem = QtWidgets.QTreeWidgetItem()
             treeItem.setTextAlignment(3, QtCore.Qt.AlignCenter)
             treeItem.setTextAlignment(1, QtCore.Qt.AlignCenter)
@@ -299,14 +303,17 @@ class DownloaderFrame(QtWidgets.QMainWindow):
     def on_downloadButton_clicked(self):
         episodes = list(self.animation.selectedUrls.keys())
         for i in range(0, len(self.animation.selectedUrls)):
-            self.animation.status.append(-1)
-            if self.animation.checkBoxItems[i].isChecked():
+            if self.animation.checkBoxItems[i].isChecked() and self.animation.status[i] == -1:
+                print(episodes[i] + ":" + self.animation.selectedUrls[episodes[i]])
                 self.ui.treeWidget.topLevelItem(i).setText(3, "等待中")
                 self.animation.status[i] = 0
                 if ".m3u8" in self.animation.selectedUrls[episodes[i]]:
-                    self.animation.futures.append(executor.submit(self.m3u8Download, i))
+                    thread = Thread(name=self.animation.title + "-" + episodes[i] + "-Download",
+                                    target=self.m3u8Download, args=(i,), daemon=True)
                 else:
-                    self.animation.futures.append(executor.submit(self.download, i))
+                    thread = Thread(name=self.animation.title + "-" + episodes[i] + "-Download",
+                                    target=self.download, args=(i,), daemon=True)
+                self.executor.add(thread)
         pass
 
     @QtCore.pyqtSlot(int, int)
