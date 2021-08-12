@@ -4,7 +4,9 @@ import re
 import shutil
 import sys
 import time
+import urllib.parse
 from threading import Thread
+from Crypto.Cipher import AES
 
 import requests
 from PyQt5 import QtWidgets, QtCore
@@ -190,9 +192,103 @@ class DownloaderFrame(QtWidgets.QMainWindow):
         title = self.animation.title
         episode = list(self.animation.selectedUrls.keys())[index]
         url = self.animation.selectedUrls[episode]
-        print(episode + ":" + url)
-        self.treeItemStatusSignal.emit(index, "m3u8功能未完成")
-        self.executor.lock.reduce()
+        print(title + "：" + episode + "开始下载")
+        self.animation.status[index] = 1
+        DOWNLOAD_DIR = os.path.join(Config.setting["DOWNLOAD_DIR"], title)
+        DOWNLOAD_PATH = os.path.join(DOWNLOAD_DIR, episode + ".mp4")
+        TEMP_DIR = os.path.join(Config.setting["TEMP_DIR"], title)
+        TEMP_EPISODE_DIR = os.path.join(TEMP_DIR, episode)
+        try:
+            if not os.path.lexists(Config.setting["DOWNLOAD_DIR"]):
+                os.mkdir(Config.setting["DOWNLOAD_DIR"])
+            if not os.path.lexists(DOWNLOAD_DIR):
+                os.mkdir(DOWNLOAD_DIR)
+            if not os.path.lexists(Config.setting["TEMP_DIR"]):
+                os.mkdir(Config.setting["TEMP_DIR"])
+            if not os.path.lexists(TEMP_DIR):
+                os.mkdir(TEMP_DIR)
+            if not os.path.lexists(TEMP_EPISODE_DIR):
+                os.mkdir(TEMP_EPISODE_DIR)
+
+            m3u8Rps = requests.get(url, proxies=self.proxies)
+            m3u8Rps.encoding = 'utf-8'
+            if '.m3u8' in m3u8Rps.text:
+                for line in m3u8Rps.text.splitlines():
+                    if '#' in line:
+                        continue
+                    URL = urllib.parse.urlparse(url)
+                    url = urllib.parse.urljoin(URL.scheme + "://" + URL.netloc, line)
+                    m3u8Rps = requests.get(url, proxies=self.proxies)
+                    m3u8Rps.encoding = 'utf-8'
+                    break
+            with open(os.path.join(TEMP_EPISODE_DIR, 'index.m3u8'), 'w', encoding='utf-8') as f:
+                f.write(m3u8Rps.text)
+
+            tsList = []
+            isEncrypted = False
+            key = None
+            for line in m3u8Rps.text.splitlines():
+                if "#EXT-X-KEY" in line:  # 找解密Key
+                    isEncrypted = True
+                    method_pos = line.find("METHOD")
+                    comma_pos = line.find(",")
+                    if comma_pos == -1:
+                        continue
+                    method = line[method_pos:comma_pos].split('=')[1]
+                    uri_pos = line.find("URI")
+                    quotation_mark_pos = line.rfind('"')
+                    key_path = line[uri_pos:quotation_mark_pos].split('"')[1]
+                    if 'http' in key_path:
+                        key_url = key_path
+                    else:
+                        key_url = url.rsplit("/", 1)[0] + "/" + key_path
+                    res = requests.get(key_url)
+                    key = res.content
+                if '#' in line:
+                    continue
+                tsList.append(line)
+
+            tsFilePaths = []
+            showSizeThread = Thread(name=title + "-" + episode + "-Size", target=self.showM3u8Percentage,
+                                    args=(index, tsFilePaths, tsList))
+            showSizeThread.start()
+            for i in range(len(tsList)):
+                tsFilePaths.append(os.path.join(TEMP_EPISODE_DIR, str(i) + '.ts'))
+                if isEncrypted:
+                    rps = requests.get(tsList[i] + "?key=" + str(key), proxies=self.proxies)
+                    cryptor = AES.new(key, AES.MODE_CBC, key)
+                    with open(tsFilePaths[i], "wb") as f:
+                        try:
+                            f.write(cryptor.decrypt(rps.content))
+                        except ValueError:
+                            f.write(rps.content)
+                else:
+                    rps = requests.get(tsList[i], proxies=self.proxies)
+                    with open(tsFilePaths[i], "wb") as f:
+                        f.write(rps.content)
+            with open(DOWNLOAD_PATH, 'wb') as f:
+                for tsFile in tsFilePaths:
+                    with open(tsFile, 'rb') as f1:
+                        f.write(f1.read())
+
+            shutil.rmtree(TEMP_EPISODE_DIR)
+            print(title + "：" + episode + " 下载完成")
+            self.animation.status[index] = 2
+        except BaseException as ex:
+            print(ex)
+            print(title + "：" + episode + " 下载失败")
+            self.animation.status[index] = 3
+            msg = {
+                "ErrorType": type(ex),
+                "Title": title,
+                "Section": episode,
+                "Event": "下载失败",
+                "TextOfLineEdit": self.inputLineEdit.text(),
+                "VideoURL": url
+            }
+            Log.writeLog(time.strftime("%Y-%m-%d"), msg)
+        finally:
+            self.executor.lock.reduce()
         pass
 
     def showPercentage(self, index: int, allSize: int):
@@ -204,6 +300,20 @@ class DownloaderFrame(QtWidgets.QMainWindow):
             if os.path.lexists(path):
                 now = os.path.getsize(path)
                 self.treeItemPercentageSignal.emit(index, int(now / allSize * 100))
+            time.sleep(0.07)
+        if self.animation.status[index] == 2:
+            self.treeItemPercentageSignal.emit(index, 100)
+            self.treeItemStatusSignal.emit(index, "已完成")
+        elif self.animation.status[index] == 3:
+            self.treeItemPercentageSignal.emit(index, 0)
+            self.treeItemStatusSignal.emit(index, "下载失败")
+        pass
+
+    def showM3u8Percentage(self, index: int, tsFilePaths: list, tsList: list):
+        self.treeItemStatusSignal.emit(index, "下载中")
+        while not self.animation.isDone(index):
+            percentage = len(tsFilePaths) / len(tsList) * 100
+            self.treeItemPercentageSignal.emit(index, int(percentage))
             time.sleep(0.07)
         if self.animation.status[index] == 2:
             self.treeItemPercentageSignal.emit(index, 100)

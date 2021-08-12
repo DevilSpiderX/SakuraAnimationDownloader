@@ -129,7 +129,7 @@ class Ui_MainWindow(object):
         self.label2.setText(_translate("MainWindow", "视频源"))
         self.downloadButton.setText(_translate("MainWindow", "下载"))
         self.videoNameLabel.setText(_translate("MainWindow", "樱花动漫下载器"))
-        self.VersionLabel.setText(_translate("MainWindow", "Version: 1.1.7"))
+        self.VersionLabel.setText(_translate("MainWindow", "Version: 1.1.8"))
         self.treeWidget.headerItem().setText(0, _translate("MainWindow", "全选"))
         self.treeWidget.headerItem().setText(1, _translate("MainWindow", "集数"))
         self.treeWidget.headerItem().setText(2, _translate("MainWindow", "进度"))
