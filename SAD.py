@@ -147,14 +147,26 @@ class DownloaderFrame(QtWidgets.QMainWindow):
         TEMP_DIR = os.path.join(Config.setting["TEMP_DIR"], title)
         TEMP_PATH = os.path.join(TEMP_DIR, episode + ".temp")
         try:
-            if not os.path.lexists(Config.setting["DOWNLOAD_DIR"]):
-                os.mkdir(Config.setting["DOWNLOAD_DIR"])
-            if not os.path.lexists(DOWNLOAD_DIR):
-                os.mkdir(DOWNLOAD_DIR)
-            if not os.path.lexists(Config.setting["TEMP_DIR"]):
-                os.mkdir(Config.setting["TEMP_DIR"])
-            if not os.path.lexists(TEMP_DIR):
-                os.mkdir(TEMP_DIR)
+            try:
+                if not os.path.lexists(Config.setting["DOWNLOAD_DIR"]):
+                    os.mkdir(Config.setting["DOWNLOAD_DIR"])
+            except FileExistsError:
+                pass
+            try:
+                if not os.path.lexists(DOWNLOAD_DIR):
+                    os.mkdir(DOWNLOAD_DIR)
+            except FileExistsError:
+                pass
+            try:
+                if not os.path.lexists(Config.setting["TEMP_DIR"]):
+                    os.mkdir(Config.setting["TEMP_DIR"])
+            except FileExistsError:
+                pass
+            try:
+                if not os.path.lexists(TEMP_DIR):
+                    os.mkdir(TEMP_DIR)
+            except FileExistsError:
+                pass
 
             r = requests.get(url, stream=True, headers=Config.REQUEST_HEADERS, proxies=self.proxies)
 
@@ -199,16 +211,31 @@ class DownloaderFrame(QtWidgets.QMainWindow):
         TEMP_DIR = os.path.join(Config.setting["TEMP_DIR"], title)
         TEMP_EPISODE_DIR = os.path.join(TEMP_DIR, episode)
         try:
-            if not os.path.lexists(Config.setting["DOWNLOAD_DIR"]):
-                os.mkdir(Config.setting["DOWNLOAD_DIR"])
-            if not os.path.lexists(DOWNLOAD_DIR):
-                os.mkdir(DOWNLOAD_DIR)
-            if not os.path.lexists(Config.setting["TEMP_DIR"]):
-                os.mkdir(Config.setting["TEMP_DIR"])
-            if not os.path.lexists(TEMP_DIR):
-                os.mkdir(TEMP_DIR)
-            if not os.path.lexists(TEMP_EPISODE_DIR):
-                os.mkdir(TEMP_EPISODE_DIR)
+            try:
+                if not os.path.lexists(Config.setting["DOWNLOAD_DIR"]):
+                    os.mkdir(Config.setting["DOWNLOAD_DIR"])
+            except FileExistsError:
+                pass
+            try:
+                if not os.path.lexists(DOWNLOAD_DIR):
+                    os.mkdir(DOWNLOAD_DIR)
+            except FileExistsError:
+                pass
+            try:
+                if not os.path.lexists(Config.setting["TEMP_DIR"]):
+                    os.mkdir(Config.setting["TEMP_DIR"])
+            except FileExistsError:
+                pass
+            try:
+                if not os.path.lexists(TEMP_DIR):
+                    os.mkdir(TEMP_DIR)
+            except FileExistsError:
+                pass
+            try:
+                if not os.path.lexists(TEMP_EPISODE_DIR):
+                    os.mkdir(TEMP_EPISODE_DIR)
+            except FileExistsError:
+                pass
 
             m3u8Rps = requests.get(url, proxies=self.proxies)
             m3u8Rps.encoding = 'utf-8'
